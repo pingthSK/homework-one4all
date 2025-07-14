@@ -1,11 +1,66 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html>
 <head>
   <title>Homework Tracker</title>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f4f9ff; }
+    input, button { margin: 5px 0; padding: 10px; width: 100%; }
+    .card { background: white; padding: 15px; margin-top: 10px; border-left: 5px solid #4CAF50; box-shadow: 0 2px 4px #ccc; }
+  </style>
 </head>
 <body>
-  <h1>Welcome to Homework Tracker</h1>
-  <p>Write your homework here!</p>
+  <h1>📚 Homework Tracker</h1>
+  <form id="form">
+    <input type="text" id="subject" placeholder="Subject" required>
+    <input type="text" id="info" placeholder="Details">
+    <input type="date" id="sent">
+    <input type="date" id="due">
+    <button type="submit">Add Homework</button>
+  </form>
+
+  <div id="homework-list"></div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+    const supabase = createClient(
+      'https://qcgnxhcimldgxtadfxnk.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjZ254aGNpbWxkZ3h0YWRmeG5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0ODg3MTgsImV4cCI6MjA2ODA2NDcxOH0.BYwIIcuDIEJXVvg2SCbNtOSPu_afSR-andot8Vaa1QY'
+    )
+
+    const form = document.getElementById('form')
+    const list = document.getElementById('homework-list')
+
+    async function loadHomework() {
+      const { data, error } = await supabase
+        .from('homework')
+        .select('*')
+        .order('due', { ascending: true })
+      list.innerHTML = ''
+      data.forEach(hw => {
+        const card = document.createElement('div')
+        card.className = 'card'
+        card.innerHTML = `<strong>${hw.subject}</strong><br>${hw.info}<br>Sent: ${hw.sent} | Due: ${hw.due}`
+        list.appendChild(card)
+      })
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault()
+      const subject = document.getElementById('subject').value
+      const info = document.getElementById('info').value
+      const sent = document.getElementById('sent').value
+      const due = document.getElementById('due').value
+
+      const { error } = await supabase
+        .from('homework')
+        .insert([{ subject, info, sent, due }])
+      form.reset()
+      await loadHomework()
+    })
+
+    loadHomework()
+  </script>
 </body>
 </html>
