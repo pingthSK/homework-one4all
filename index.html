@@ -37,6 +37,12 @@
         .from('homework')
         .select('*')
         .order('due', { ascending: true })
+
+      if (error) {
+        list.innerHTML = `<p style="color:red;">Failed to load data: ${error.message}</p>`
+        return
+      }
+
       list.innerHTML = ''
       data.forEach(hw => {
         const card = document.createElement('div')
@@ -56,6 +62,7 @@
       const { error } = await supabase
         .from('homework')
         .insert([{ subject, info, sent, due }])
+      if (error) alert('Failed to add: ' + error.message)
       form.reset()
       await loadHomework()
     })
