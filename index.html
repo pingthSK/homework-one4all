@@ -17,30 +17,29 @@
     <input type="date" id="due" required>
     <button type="submit">Add Homework</button>
   </form>
-
   <div id="homework-list"></div>
 
   <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-    const supabase = createClient(
-      'https://qcgnxhcimldgxtadfxnk.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjZ254aGNpbWxkZ3h0YWRmeG5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0ODg3MTgsImV4cCI6MjA2ODA2NDcxOH0.BYwIIcuDIEJXVvg2SCbNtOSPu_afSR-andot8Vaa1QY'
-    )
-
+    const supabase = createClient('https://qcgnxhcimldgxtadfxnk.supabase.co', 'your-anon-key')
+    const classId = localStorage.getItem('class_id')
     const form = document.getElementById('form')
     const list = document.getElementById('homework-list')
 
+    if (!classId) {
+      alert('Please join a class first.');
+      window.location.href = 'login.html';
+    }
+
     async function loadHomework() {
       const { data, error } = await supabase
-        .from('HomeworkTest')
-        .select('*')
+        .from('homeworks')
+        .select(`*, classes ( room_number, school_id, schools ( name ) )`)
+        .eq('class_id', classId)
         .order('due', { ascending: true })
 
-      if (error) {
-        list.innerHTML = `<p style="color:red;">Failed to load data: ${error.message}</p>`
-        return
-      }
+      if (error) return list.innerHTML = `<p style="color:red;">Error loading: ${error.message}</p>`
 
       list.innerHTML = ''
       data.forEach(hw => {
@@ -49,9 +48,10 @@
         card.innerHTML = `
           <strong>${hw.subject}</strong><br>
           ${hw.info}<br>
+          🏫 School: ${hw.classes?.schools?.name || 'N/A'}<br>
+          🏘️ Class: ${hw.classes?.room_number || 'N/A'}<br>
           📅 Due: ${new Date(hw.due).toLocaleDateString()}<br>
-          🕑 Created at: ${new Date(hw.created_at).toLocaleString()}
-        `
+          🕑 Created at: ${new Date(hw.created_at).toLocaleString()}`
         list.appendChild(card)
       })
     }
@@ -63,10 +63,10 @@
       const due = document.getElementById('due').value
 
       const { error } = await supabase
-        .from('HomeworkTest')
-        .insert([{ subject, info, due }])
+        .from('homeworks')
+        .insert([{ subject, info, due, class_id: classId }])
 
-      if (error) alert('❌ Failed to add: ' + error.message)
+      if (error) return alert('Error: ' + error.message)
       form.reset()
       await loadHomework()
     })
