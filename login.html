@@ -10,35 +10,52 @@
 </head>
 <body>
   <h2>🚪 Join a Class</h2>
-  <input id="name" placeholder="Your Display Name" required>
-  <input id="school" placeholder="School Name" required>
-  <input id="room" placeholder="Room Number (e.g., 401)" required>
-  <input id="year" placeholder="Academic Year (e.g., 2025)" required>
-  <button onclick="joinClass()">Enter</button>
+
+  <form id="join-form">
+    <input id="name" placeholder="Your Display Name" required>
+    <input id="school" placeholder="School Name" required>
+    <input id="room" placeholder="Room Number (e.g., 401)" required>
+    <input id="year" placeholder="Academic Year (e.g., 2025)" required>
+    <button type="submit">Enter</button>
+  </form>
 
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-    const supabase = createClient('https://qcgnxhcimldgxtadfxnk.supabase.co', 'your-anon-key')
+    const supabase = createClient('https://qcgnxhcimldgxtadfxnk.supabase.co', 'your-anon-key');
 
-    async function joinClass() {
-      const displayName = document.getElementById('name').value
-      const school = document.getElementById('school').value.trim()
-      const room = document.getElementById('room').value.trim()
-      const year = parseInt(document.getElementById('year').value)
+    const form = document.getElementById('join-form');
 
-      const user = supabase.auth.user()
-      if (!user) return alert('Please log in to Supabase first')
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const displayName = document.getElementById('name').value;
+      const school = document.getElementById('school').value.trim();
+      const room = document.getElementById('room').value.trim();
+      const year = parseInt(document.getElementById('year').value);
+
+      const {
+        data: { user },
+        error: authError
+      } = await supabase.auth.getUser();
+      if (!user) {
+        alert('Please log in to Supabase first');
+        return;
+      }
 
       // 1. Insert/find school
       let { data: schoolData } = await supabase
         .from('schools')
         .select('*')
         .eq('name', school)
-        .single()
+        .single();
 
       if (!schoolData) {
-        const { data, error } = await supabase.from('schools').insert([{ name: school }]).select().single()
-        schoolData = data
+        const { data, error } = await supabase
+          .from('schools')
+          .insert([{ name: school }])
+          .select()
+          .single();
+        schoolData = data;
       }
 
       // 2. Insert/find class
@@ -46,27 +63,31 @@
         .from('classes')
         .select('*')
         .match({ school_id: schoolData.id, room_number: room, year })
-        .single()
+        .single();
 
       if (!classData) {
-        const { data, error } = await supabase.from('classes')
+        const { data, error } = await supabase
+          .from('classes')
           .insert([{ school_id: schoolData.id, room_number: room, year }])
-          .select().single()
-        classData = data
+          .select()
+          .single();
+        classData = data;
       }
 
       // 3. Create user if not exists
-      await supabase.from('users')
-        .upsert([{ id: user.id, display_name: displayName }])
+      await supabase
+        .from('users')
+        .upsert([{ id: user.id, display_name: displayName }]);
 
       // 4. Add membership
-      await supabase.from('memberships')
-        .upsert([{ user_id: user.id, class_id: classData.id, role: 'writer' }])
+      await supabase
+        .from('memberships')
+        .upsert([{ user_id: user.id, class_id: classData.id, role: 'writer' }]);
 
-      alert('✅ Joined Class Successfully!')
-      localStorage.setItem('class_id', classData.id)
-      window.location.href = 'index.html'
-    }
+      alert('✅ Joined Class Successfully!');
+      localStorage.setItem('class_id', classData.id);
+      window.location.href = 'index.html';
+    });
   </script>
 </body>
 </html>
